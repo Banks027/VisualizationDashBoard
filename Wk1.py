@@ -5,48 +5,26 @@ import struct
 from types import SimpleNamespace
 import numpy as np
 import pandas as pd
-import statistics
-#
-#
-#
-# function prop type is called 
-# code read one type of file and filters based on residental 
-# ClosePrice, LivingArea, DaysOnMarket are assigned number since their csv has colloms in own location
-#
-# residental == prop type is saved into own csv
-# min, max, mean, median, percentiles == prop type is saved into own csv
 
-# detect coloms that are 
-# return username, score, rank (way to return mult values)
-# name, user_score, user_rank = get_user_stats()
-#
-#
-#
+ClosePrice= SimpleNamespace(Column=-1,Min=0, Max=0,Mean=0,median=0, percentiles=0)
+LivingArea= SimpleNamespace(Column=-1,Min=0, Max=0,Mean=0,median=0, percentiles=0)
+DaysOnMarket= SimpleNamespace(Column=-1,Max=0,Mean=0,median=0, percentiles=0)
+Column = SimpleNamespace(PropType =-1, ClosePrice=-1, LivingArea=-1,DaysOnMarket=-1)
+
 
 # Inspect structure
-sold.columns
+prefix.columns
 sold.head()
 # Check property categories
 sold['PropertyType'].unique()
 # Filter residential
 sold = sold[sold.PropertyType == 'Residential']
 # Validate completeness
-sold.isnull().sum()
 
 
 
 def AllCalcs(Catagory,List):
-        #ClosePrice mean, min, max, mean, median, percentiles
-       # LivingArea mean, min, max, mean, median, percentiles
-        # Day on market mean, min, max, mean, median, percentiles
-    Min= Min(List)
-    Max= MaxCalc(List)
-    Mean= statistics.mean(List)
-    Median= statistics.median(List) #change to numpy
-    # List= sortingAl(List,len(List)) #sorts the list of data so calcuations can be done & sum
-    percentiles= np.percentile(List, 90)
-    #write to file
-    return Min, Max,Mean,Median, percentiles,
+    return np.min(List), np.max(List), np.mean(List), np.median(List), np.percentile(List, 90)
 
 def Typefiltering(Catagory,rows,Column,filtered_rows):
  
@@ -57,39 +35,30 @@ def Typefiltering(Catagory,rows,Column,filtered_rows):
 
   return filtered_rows         
 
-# Usage
-
-ClosePrice= SimpleNamespace(Column=-1,Min=0, Max=0,Mean=0,median=0, percentiles=0)
-
-LivingArea= SimpleNamespace(Column=-1,Min=0, Max=0,Mean=0,median=0, percentiles=0)
-DaysOnMarket= SimpleNamespace(Column=-1,Max=0,Mean=0,median=0, percentiles=0)
-
-Column = SimpleNamespace(PropType =-1, ClosePrice=-1, LivingArea=-1,DaysOnMarket=-1)
-
 def read_csv_file(file_path, file_name,Column):
     file_path = Path(file_path)
     filtered_rows = []
-    List[:]=0 #all elements of array are zero
+    List= [] #all elements of array are zero
     try:
         pattern = f"{file_name}*.csv"
         for csv_file in file_path.glob(pattern):  # goes through all files in the directory that match the pattern
-            if csv_file.name.endswith("_filtered.csv"):
+            if csv_file.name.endswith("_filtered.csv") |csv_file.name.endswith("_calculated.csv") :
                 continue #breaks loop and excludes
 
             with csv_file.open("r", newline="", encoding="utf-8") as file:
                 reader = csv.reader(file)
                 for row in reader:
+                   
                    Typefiltering(Column.proptype,row,Column,filtered_rows) ##dunno if this is right
                    for prefix in (ClosePrice, LivingArea, DaysOnMarket):
                     #make code only print resdental properties. 
                     
-                    List= np.loadtxt("data.txt", dtype=int)
+                    # List= np.loadtxt("data.txt", dtype=int)
                     prefix= AllCalcs(prefix.Min, prefix.Max, prefix.Mean, prefix.median, prefix.percentiles)
+                    prefix.isnull().sum() #It returns the total number of missing or null values (such as NaN or None) in a specific column or dataset named sold
+                    prefix['PropertyType'].unique()
                     List.clear() #resets array list after done
-
-                
-
-                    
+ 
                     #determine unique property types
                     # Null count summary table for columns above 90%
                   
@@ -105,27 +74,30 @@ def read_csv_file(file_path, file_name,Column):
         return filtered_rows
 
 
-def print_filtered_csv(file_path, file_name,Column,row):
+def print_filtered_csv(file_path, file_name,Column,rows):
+   
     # rows = read_csv_file(file_path, file_name,Column)
-    # for row in rows:
+     for row in rows:
         print(",".join(row)) #prints all the rows in the filtered list as a single string, with each value separated by a comma
     # return rows
 
 
 def create_csv_file(file_path, file_name,Column):
     rows = read_csv_file(file_path, file_name,Column)
-    output_path = file_path / f"{file_name}_filtered.csv"
+
+    for prefix in ("_Calcuations.csv", "_filtered.csv"):
+        output_path = Path(file_path) / f"{file_name}{prefix}"
  
-    try:
-        with output_path.open("w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file)
-            writer.writerows(rows)
-            #make sure all records are on their own rows
-        print(f"\nFiltered rows written to {output_path}")
-    except PermissionError:
-        print("Please check the write permissions and try again.")
-    except Exception as e:
-        print(f"An error occurred: {e}")
+        try:
+            with output_path.open("w", newline="", encoding="utf-8") as file:
+                writer = csv.writer(file)
+                writer.writerows(rows)
+                #make sure all records are on their own rows
+            print(f"\nFiltered rows written to {output_path}")
+        except PermissionError:
+            print("Please check the write permissions and try again.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":
@@ -152,7 +124,5 @@ if __name__ == "__main__":
                 continue
 
         if (Column>-1):      #need to double check this
-
-
             read_csv_file(file_path, prefix, Column)
            # create_csv_file(file_path, prefix, column)
