@@ -12,6 +12,11 @@ PROPERTY_FILTER = "Residential"
 PERCENTILES = (10, 25, 50, 75, 90)
 TERMINAL_FLOAT_FORMAT = lambda value: f"{value:,.6f}"
 
+# Step 1 – Fetch the mortgage rate data from FRED
+URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=MORTGAGE30US"
+mortgage = pd.read_csv(URL, parse_dates=['observation_date'])
+mortgage.columns = ['date', 'rate_30yr_fixed']
+
 
 # Reporting rules:
 # 1. Build a combined dataset from all monthly files in the date range.
@@ -19,7 +24,7 @@ TERMINAL_FLOAT_FORMAT = lambda value: f"{value:,.6f}"
 # 3. Apply the Residential-only filter.
 # 4. Print and save null-count, missing-value, and numeric distribution summaries.
 # 5. Save the filtered dataset as a new CSV.
-
+#hi
 
 def most_recent_completed_month(today=None):
     today = today or date.today()
@@ -275,8 +280,73 @@ def process_prefix(prefix):
     filtered = filter_residential_only(combined, get_property_column(combined))
     report_frame = build_report(prefix, combined, filtered)
     save_outputs(SOURCE_DIR, prefix, filtered, report_frame)
+    return filtered
+
+# Step 4 – Merge mortgage rates onto the combined MLS datasets
+def fetch_mortgage_monthly_rates(url=URL):
+    mortgage = pd.read_csv(url, parse_dates=["observation_date"])
+    mortgage.columns = ["date", "rate_30yr_fixed"]
+    mortgage["year_month"] = mortgage["date"].dt.to_period("M")
+    mortgage_monthly = (
+        mortgage.groupby("year_month", as_index=False)["rate_30yr_fixed"]
+        .mean()
+    )
+    return mortgage_monthly
+
+
+def merge_mortgage_rates(frame, mortgage_monthly, date_column, dataset_name):
+    frame_with_key = frame.copy()
+    frame_with_key["year_month"] = pd.to_datetime(
+        frame_with_key[date_column],
+        errors="coerce",
+    ).dt.to_period("M")
+
+    merged = frame_with_key.merge(mortgage_monthly, on="year_month", how="left")
+    null_rate_count = int(merged["rate_30yr_fixed"].isnull().sum())
+    print(f"{dataset_name} null rate count after merge: {null_rate_count}")
+
+    if null_rate_count != 0:
+        raise ValueError(
+            f"{dataset_name} merge produced {null_rate_count} null rate values."
+        )
+
+    return merged
+
+
+def save_enriched_outputs(file_path, sold_with_rates, listings_with_rates):
+    file_path = Path(file_path)
+    file_path.mkdir(parents=True, exist_ok=True)
+
+    sold_output = file_path / "CRMLSSold_filtered_residential_with_rates.csv"
+    listings_output = file_path / "CRMLSListing_filtered_residential_with_rates.csv"
+
+    sold_with_rates.to_csv(sold_output, index=False)
+    listings_with_rates.to_csv(listings_output, index=False)
+
+    print(f"Enriched sold dataset saved to {sold_output}")
+    print(f"Enriched listings dataset saved to {listings_output}")
 
 
 if __name__ == "__main__":
-    for prefix in ("CRMLSListing", "CRMLSSold"):
-        process_prefix(prefix)
+    mortgage_monthly = fetch_mortgage_monthly_rates()
+    sold = process_prefix("CRMLSSold")
+    listings = process_prefix("CRMLSListing")
+
+    if sold is None or listings is None:
+        raise RuntimeError("Unable to build the sold and listings datasets for merging.")
+
+    sold_with_rates = merge_mortgage_rates(sold, mortgage_monthly, "CloseDate", "Sold")
+    listings_with_rates = merge_mortgage_rates(
+        listings,
+        mortgage_monthly,
+        "ListingContractDate",
+        "Listings",
+    )
+
+    print(
+        sold_with_rates[
+            ["CloseDate", "year_month", "ClosePrice", "rate_30yr_fixed"]
+        ].head()
+    )
+
+    save_enriched_outputs(SOURCE_DIR, sold_with_rates, listings_with_rates)
