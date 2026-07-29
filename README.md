@@ -1,12 +1,11 @@
 # Visualization Dashboard
-
-## 
+ 
 This program is able to take data from several `CRMLSListing20YYMM.csv` and `CRMLSSold20YYMM.csv`. Moreover this programs has checks in place that elimate invaild data (ex.negative listing price), which ensure data quaility. Addtionally, live data from St. Louis Federal Reserve (FRED) API and propertry latitude/longitudes are incorperated into the data sets.  
 
 
 ## Prerequisites
 
-- Install `numpy' , `pandas`, and `geopands` into your Python IDE environment:
+- Install `numpy` , `pandas`, and `geopands` into your Python IDE environment:
   ```bash
   pip install numpy pandas
   ```
