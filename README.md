@@ -1,6 +1,6 @@
 # Visualization Dashboard
  
-This program is able to take data from several `CRMLSListing20YYMM.csv` and `CRMLSSold20YYMM.csv`. Moreover, this program has checks in place that elimate invaild data (ex.negative listing price), which ensure data quaility. Addtionally, live data from St. Louis Federal Reserve (FRED) API and propertry latitude/longitudes are incorperated into the data sets.  
+This program is able to take data from several `CRMLSListing20YYMM.csv` and `CRMLSSold20YYMM.csv` files. Moreover, this Visualzation Deashboard has checks in place that eliminate invaild data (ex.negative listing price), which ensure data quaility. Addtionally, live data from St. Louis Federal Reserve (FRED) API and propertry latitude/longitudes are incorperated into the data sets.  
 
 
 ## Prerequisites
